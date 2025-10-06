@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aitiip · K‑Messe 2025 · App informativa</title>
+  <meta name="description" content="App informativa del viaje de Aitiip a K‑Messe 2025: itinerario, logística, mapas, búsqueda, filtros y estilo bávaro con contraste mejorado." />
+  <link rel="icon" href="/favicon.ico" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bavarian-blue:#0B74B8;        /* Azul bávaro */
+      --bavarian-navy:#0A2C56;        /* Azul noche (títulos) */
+      --bavarian-blue-dark:#064B8A;   /* Azul oscuro (detalles) */
+      --gold:#E8A60C;                 /* Acento dorado */
+      --cream:#FAF7EE;                /* Fondo crema */
+      --fg:#1C2430;                   /* Texto principal */
+      --card:#FFFFFF;                 /* Tarjetas */
+      --border:rgba(10,44,86,.15);
+    }
+    body{ background:var(--cream); color:var(--fg); font-family:'Merriweather', serif; }
+    .font-okt{ font-family:'UnifrakturCook', cursive; letter-spacing:.5px; }
+    .bavarian-banner{ --s:28px; background: conic-gradient(from 45deg, var(--bavarian-blue) 25%, #fff 0 50%, var(--bavarian-blue) 0 75%, #fff 0) 0 0/var(--s) var(--s); filter:saturate(1.05); }
+    .title-ribbon{ background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.9)); border: 2px solid var(--bavarian-navy); border-left-width: 8px; border-right-width: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding:.35rem 1.25rem; border-radius: 18px; }
+    .topbar{ backdrop-filter:blur(8px); background:rgba(255,255,255,.9); border-bottom:4px solid var(--gold); }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1rem; box-shadow:0 8px 20px rgba(10,44,86,.06) }
+    .badge{ display:inline-flex; align-items:center; gap:.4rem; border-radius:9999px; padding:.35rem .7rem; font-size:.8rem; font-weight:700; border:2px solid var(--bavarian-blue); color:var(--bavarian-navy); background:#fff }
+    .timeline-line{ position:absolute; left:1rem; top:.5rem; bottom:0; width:4px; background:linear-gradient(180deg, var(--gold), rgba(232,166,12,.2)); border-radius:999px }
+    .timeline-node{ position:absolute; left:1rem; transform:translate(-50%,0); width:34px; height:34px; border-radius:999px; background:#fff; border:3px solid var(--bavarian-blue); display:grid; place-items:center }
+    .weather-card{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:1rem; box-shadow:0 6px 14px rgba(10,44,86,.06) }
+    /* Enlaces tipo chip para mejor tap en móvil */
+    .chip-link{ display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .75rem; border-radius:9999px; border:2px solid var(--bavarian-blue); background:#fff; color:var(--bavarian-navy); text-decoration:none; }
+    .chip-link:hover{ box-shadow:0 4px 10px rgba(10,44,86,.1); }
+    .chip-wrap{ display:flex; flex-wrap:wrap; gap:.5rem; }
+    /* Debug panel (se muestra con ?debug=1) */
+    #debug{ position:fixed; bottom:12px; right:12px; width:360px; max-height:52vh; overflow:auto; background:#fff; border:1px solid #ddd; border-left:6px solid var(--bavarian-blue); border-radius:10px; box-shadow:0 10px 26px rgba(0,0,0,.18); padding:12px; font:12px/1.25 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; display:none }
+    #debug pre{ white-space:pre-wrap; word-wrap:break-word; }
+  </style>
+</head>
+<body class="antialiased" data-app>
+
+  <!-- Header con patrón y ribbon -->
+  <header class="relative">
+    <div class="bavarian-banner h-28 md:h-36 w-full"></div>
+    <div class="absolute inset-0 grid place-items-center px-4">
+      <div class="title-ribbon inline-flex items-center gap-3">
+        <i data-lucide="party-popper" class="text-[var(--bavarian-navy)]"></i>
+        <h1 class="font-okt text-4xl md:text-6xl text-[var(--bavarian-navy)]">Aitiip · K‑Messe 2025</h1>
+        <i data-lucide="beer" class="text-[var(--gold)]"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- Topbar (sin compartir, sin idioma) -->
+  <div id="topbar" class="topbar sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <nav class="flex items-center gap-4 text-sm">
+        <a href="#resumen" class="hover:underline">Resumen</a>
+        <a href="#lista" class="hover:underline">Itinerario</a>
+        <a href="#clima" class="hover:underline">Clima</a>
+        <a href="#glosario" class="hover:underline">Glosario</a>
+      </nav>
+      <div class="text-xs text-slate-500">Uso interno · Aitiip</div>
+    </div>
+  </div>
+
+  <!-- Controles -->
+  <section id="controls" class="max-w-6xl mx-auto px-4 py-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      <div class="lg:col-span-6">
+        <label class="block text-sm mb-1">Buscar</label>
+        <div class="relative">
+          <input id="q" type="search" class="w-full rounded-xl border border-black/10 bg-white px-10 py-2" placeholder="Filtra por lugar, nota, ciudad…" />
+          <i data-lucide="search" class="absolute left-3 top-2.5 h-5 w-5 text-slate-400" aria-hidden="true"></i>
+        </div>
+      </div>
+      <div class="lg:col-span-3">
+        <label class="block text-sm mb-1">Día</label>
+        <div id="dayTabs" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="lg:col-span-3">
+        <label class="block text-sm mb-1">Filtros</label>
+        <div id="filters" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Resumen & Lista & Clima & Glosario -->
+  <main class="max-w-6xl mx-auto px-4 pb-10">
+    <section id="resumen" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"></section>
+    <section id="lista" class="space-y-6"></section>
+    <section id="clima" class="mt-12">
+      <h2 class="font-okt text-3xl text-[var(--bavarian-navy)] mb-4">Pronóstico del tiempo (enlace en tiempo real)</h2>
+      <div id="weatherGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      <p class="text-xs text-slate-500 mt-2">Los enlaces abren la búsqueda del clima actual en Google para cada ciudad.</p>
+    </section>
+
+    <!-- Glosario ES ⇄ DE (solo visual) -->
+    <section id="glosario" class="mt-12">
+      <h2 class="font-okt text-3xl text-[var(--bavarian-navy)] mb-4">Glosario rápido · Español ⇄ Alemán</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm bg-white border border-[var(--border)] rounded-xl overflow-hidden">
+          <thead class="bg-[var(--cream)] text-[var(--bavarian-navy)]">
+            <tr>
+              <th class="text-left px-4 py-2 border-b">Español</th>
+              <th class="text-left px-4 py-2 border-b">Alemán</th>
+            </tr>
+          </thead>
+          <tbody id="glossaryBody"></tbody>
+        </table>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">Frases útiles para el día a día en la feria y restaurantes.</p>
+    </section>
+  </main>
+
+  <footer class="border-t-4 border-[var(--gold)] py-8 bg-white">
+    <div class="max-w-6xl mx-auto px-4 text-center text-sm">
+      <p>&copy; 2025 Aitiip Centro Tecnológico · Uso interno · <a class="underline text-[var(--bavarian-blue-dark)]" href="https://www.k-online.com/" target="_blank" rel="noopener noreferrer">K‑Messe</a></p>
+    </div>
+  </footer>
+
+  <!-- Debug panel -->
+  <div id="debug"><strong>Tests</strong><pre id="debugLog"></pre></div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    // ===== Datos (estructura anterior restaurada, con ENLACES) =====
+    const DATA = {
+      summary: [
+        { id:'meet', icon:'map-pin', label:'Punto de reunión', lines:[
+          'Área El Descanso 333 — 05:45'
+        ], link:'https://maps.app.goo.gl/7MUue69Jso2YYSMy8' },
+        { id:'parking_t2', icon:'car', label:'Aparcamiento T2 Barcelona', lines:[
+          'Párking oficial T2 BCN (larga estancia)'
+        ], link:'https://maps.app.goo.gl/SoRYXKTks6jYSUfi9' },
+        { id:'flight', icon:'plane', label:'Vuelos', lines:[
+          'Ida (BCN → DUS): Vie, 10 Oct | 11:00 - 13:20',
+          'Vuelta (CGN → BCN): Lun, 13 Oct | 17:55 - 20:05'
+        ]},
+        { id:'stay', icon:'home', label:'Alojamiento', lines:[
+          'Kulle 16, 42657 Solingen', 'Maps → Kulle 16'
+        ], link:'https://maps.google.com/?cid=14643035704500995641' },
+        { id:'car', icon:'car', label:'Transporte', lines:[
+          'Sixt · Recogida: Vie 10 (13:20) DUS', 'Devolución: Lun 13 (tarde) CGN'
+        ]}
+      ],
+      days: [
+        { key:'viernes', date:'2025-10-10', label:'Viernes 10', items:[
+          { time:'13:20', title:'Llegada a Düsseldorf', type:'logistica', icon:'clock',
+            text:'Aterrizamos en Düsseldorf. Recogemos equipaje y vamos directos a alquiler de coches. Opción de comprar cosas para la casa en el supermercado REWE (A la derecha de la terminal)' },
+          { time:'15:00', title:'Check‑in', type:'logistica', icon:'hotel',
+            text:'Llegada al alojamiento en Solingen (Kulle 16). Dejad maletas, revisad llaves y Wi‑Fi, y un momento para estirar las piernas antes de salir de nuevo.',
+            link:'https://maps.google.com/?cid=14643035704500995641' },
+          { time:'10:00-18:00', title:'Feria K 2025 · Día 1', type:'feria', icon:'building-2',
+            text:'Messe Düsseldorf. Visita corta antes de ir a la casa.',
+            link:'https://maps.app.goo.gl/Cp5zJsGBdERZ9pHi9'},
+          { time:'20:30', title:"Cena: Brandy's Eat & Drink", type:'restauracion', icon:'utensils',
+            text:'Bistró alemán informal para abrir boca. Platos recomendados: Schnitzel crujiente con patatas salteadas; Currywurst con salsa especiada (nivel medio de picante). Maridaje: Krombacher Pils o una Dunkel local. Postre: Apfelstrudel tibio con helado.',
+            links:[
+              {label:'Dirección', url:'https://maps.app.goo.gl/LSPid7HDtA2mXWyR7'},
+              {label:'Menú (PDF)', url:'https://weur-cdn.speisekarte.menu/storage/media/companies_menu_pdf/88714972/brandys-eat-drink-solingen-speisekarte.pdf'},
+              {label:'Web', url:'https://brandys-solingen.jimdofree.com/'}
+            ]}
+        ]},
+        { key:'sabado', date:'2025-10-11', label:'Sábado 11', items:[
+          { time:'08:00', title:'Desayuno', type:'restauracion', icon:'coffee',
+            text:'Bäckerei Steinbrink (Solingen): Brötchen recién horneados, croissants artesanos y café “mit Milch”. Tip: pedir surtido para compartir en mesa.',
+            link:'https://maps.app.goo.gl/X5wK1WAM3jvMSDsdA' },
+          { time:'10:00-18:00', title:'Feria K 2025 · Día 2', type:'feria', icon:'building-2',
+            text:'Messe Düsseldorf. Visita día 2 de Feria. Día Completo. Comida por los alrededores.',
+            link:'https://maps.app.goo.gl/Cp5zJsGBdERZ9pHi9' },
+          { time:'20:30', title:'Cena: Peters Brauhaus (Colonia)', type:'restauracion', icon:'beer',
+            text:'Clásico de Altstadt. Estrellas: Himmel un Ääd (morcilla + puré de manzana y patata), codillo asado con corteza muy crujiente y salchichas a la parrilla. Kölsch en vasos de 0,2L: servicio continuo y helada. Ambiente animado, ideal en grupo.',
+            links:[
+              {label:'Dirección', url:'https://maps.app.goo.gl/4awzu7CFUNtcGrZA8'},
+              {label:'Menú', url:'https://peters-brauhaus.de/menu-english/'},
+              {label:'Parking', url:'https://maps.app.goo.gl/cyiwuomTrQuAr3en6'}
+            ]}
+        ]},
+        { key:'domingo', date:'2025-10-12', label:'Domingo 12', items:[
+          { time:'08:00', title:'Desayuno', type:'restauracion', icon:'coffee',
+            text:'Repetimos en Steinbrink. Dulce: Apfelstrudel. Salado: Laugenbrezel. Buen sitio para planificar objetivos del día antes de entrar a feria.',
+            link:'https://maps.app.goo.gl/X5wK1WAM3jvMSDsdA' },
+          { time:'10:00-18:00', title:'Feria K 2025 · Día 3', type:'feria', icon:'building-2',
+            text:'Messe Düsseldorf. Visita día 3 de Feria. Día Completo. Comida por los alrededores.',
+            link:'https://maps.app.goo.gl/Cp5zJsGBdERZ9pHi9' },
+          { time:'20:30', title:'Cena: Uerige (Düsseldorf)', type:'restauracion', icon:'utensils',
+            text:'La cuna del Altbier. Imprescindible: Haxe (codillo) con piel extra crujiente. Opción tradicional: Mettbrötchen (carne aliñada). Servicio directo: si quieres otra “Alt”, levanta el vaso. Ambiente ruidoso, auténtico y muy local.',
+            links:[
+              {label:'Platos', url:'https://www.uerige.de/en/uerige-a-la-carte/'},
+              {label:'Parking 1', url:'https://maps.app.goo.gl/DVhsZZvqTzvwjkhk9'},
+              {label:'Parking 2', url:'https://maps.app.goo.gl/Wh87Q4LmrNFSZJfd9'}
+            ]}
+        ]},
+        { key:'lunes', date:'2025-10-13', label:'Lunes 13', items:[
+          { time:'08:30', title:'Desayuno', type:'restauracion', icon:'coffee',
+            text:'Berliner relleno y café para cargar pilas. Alternativa salada: bocadillo de queso y pepino. Take‑away disponible en la panadería.',
+            link:'https://maps.app.goo.gl/X5wK1WAM3jvMSDsdA' },
+          { time:'10:00-18:00', title:'Feria K 2025 · Día 3', type:'feria', icon:'building-2',
+            text:'Messe Düsseldorf. Visita día 4 de Feria. Día Corte. Comida por los alrededores o de camino a Colonia.',
+            link:'https://maps.app.goo.gl/Cp5zJsGBdERZ9pHi9' },
+          { time:'15:30', title:'Rumbo al aeropuerto', type:'logistica', icon:'fuel',
+            text:'Repostar en Total y devolver coche en Parkhaus P2 (CGN). Revisar depósito, fotos del coche por si acaso, y comprobante de entrega.',
+            links:[
+              {label:'Gasolinera Total', url:'https://maps.google.com/?cid=7664181089079082994'},
+              {label:'Devolución · P2', url:'https://maps.google.com/?cid=9247317221636157764'}
+            ]},
+          { time:'17:55', title:'Vuelo de regreso (CGN → BCN)', type:'logistica', icon:'plane-takeoff',
+            text:'Despegue rumbo a Barcelona. Momento redondo para repasar fotos, anécdotas y leads generados. ¡Prost y hasta la próxima!'
+          }
+        ]}
+      ],
+      tags: { logistica:'Logística', feria:'Feria', restauracion:'Restauración', ocio:'Ocio' },
+      weatherCities: [
+        { name:'Düsseldorf', q:'el tiempo en Düsseldorf', icon:'cloud-sun' },
+        { name:'Solingen', q:'el tiempo en Solingen', icon:'cloud-rain' },
+        { name:'Colonia', q:'el tiempo en Colonia', icon:'cloudy' },
+        { name:'Dortmund', q:'el tiempo en Dortmund', icon:'sun' }
+      ],
+      glossary: [
+        { es:'Con tarjeta de crédito, por favor', de:'Mit Kreditkarte, bitte.' },
+        { es:'Una cerveza, por favor', de:'Ein Bier, bitte.' },
+        { es:'Dos cervezas, por favor', de:'Zwei Bier, bitte.' },
+        { es:'3 cervezas, por favor', de:'Drei Bier, bitte.' },
+        { es:'4 cervezas, por favor', de:'Vier Bier, bitte.' },
+        { es:'5 cervezas, por favor', de:'Fünf Bier, bitte.' },
+        { es:'Muchas gracias', de:'Vielen Dank!' }
+      ]
+    };
+
+    // ===== Estado =====
+    const state = {
+      day: (localStorage.getItem('day') || 'all'),
+      q: '',
+      filters: new Set(JSON.parse(localStorage.getItem('filters')||'[]'))
+    };
+    function save(){
+      localStorage.setItem('day', state.day);
+      localStorage.setItem('filters', JSON.stringify(Array.from(state.filters)));
+    }
+
+    // ===== Render resumen =====
+    function renderSummary(){
+      const el = document.getElementById('resumen');
+      const cards = DATA.summary.map(function(s){
+        const lineItems = s.lines.map(function(l){ return '<li>'+ l +'</li>'; }).join('');
+        var linkDiv = '';
+        if (s.link){ linkDiv = '<div class="mt-2 text-sm"><a class="chip-link" target="_blank" rel="noopener noreferrer" href="'+ s.link +'"><i data-lucide="map-pin" class="w-4 h-4"></i><span>Maps</span></a></div>'; }
+        return [
+          '<div class="card">',
+          '  <div class="flex items-center gap-2 mb-2">',
+          '    <i data-lucide="'+ s.icon +'" class="w-5 h-5 text-[var(--bavarian-blue)]"></i>',
+          '    <h3 class="font-semibold">'+ s.label +'</h3>',
+          '  </div>',
+          '  <ul class="text-sm space-y-1">'+ lineItems +'</ul>',
+               linkDiv,
+          '</div>'
+        ].join('\n');
+      }).join('');
+      el.innerHTML = cards;
+      lucide.createIcons();
+    }
+
+    // ===== Tabs de día =====
+    function renderDayTabs(){
+      const cont = document.getElementById('dayTabs');
+      const days = [{key:'all', label:'Todos'}].concat(DATA.days.map(function(d){ return {key:d.key, label:d.label}; }));
+      cont.innerHTML = days.map(function(d){
+        const active = (state.day===d.key);
+        return '<button data-day="'+ d.key +'" class="px-3 py-2 rounded-xl border-2 '+ (active? 'border-[var(--bavarian-blue)] text-[var(--bavarian-navy)] bg-white' : 'border-slate-200') +'">'+ d.label +'</button>';
+      }).join('');
+      cont.querySelectorAll('button').forEach(function(b){ b.onclick = function(){ state.day = b.dataset.day; save(); renderList(); renderDayTabs(); }; });
+    }
+
+    // ===== Filtros por categoría =====
+    function renderFilters(){
+      const cont = document.getElementById('filters');
+      cont.innerHTML = Object.keys(DATA.tags).map(function(k){
+        const label = DATA.tags[k];
+        const active = (state.filters.size===0 || state.filters.has(k));
+        return '<button data-tag="'+ k +'" class="badge '+ (active? '' : 'opacity-50') +'">'
+             + '<i data-lucide="check-circle-2" class="w-4 h-4"></i>'+ label +'</button>';
+      }).join('');
+      cont.querySelectorAll('button').forEach(function(b){
+        b.onclick = function(){
+          const key = b.dataset.tag;
+          if(state.filters.has(key)) state.filters.delete(key); else state.filters.add(key);
+          if(state.filters.size===Object.keys(DATA.tags).length) state.filters.clear(); // todos activos => sin filtro
+          save(); renderFilters(); renderList();
+        };
+      });
+      lucide.createIcons();
+    }
+
+    // ===== Lista con estética bávara =====
+    function renderList(){
+      const list = document.getElementById('lista');
+      const q = (state.q||'').toLowerCase();
+      function dayFilter(d){ return state.day==='all' || state.day===d.key; }
+      function tagActive(tag){ return state.filters.size===0 || state.filters.has(tag); }
+
+      var html = '';
+      DATA.days.filter(dayFilter).forEach(function(d){
+        const header = (
+          '<div class="flex items-end gap-3 mt-10">'
+          + '  <h2 class="font-okt text-3xl text-[var(--bavarian-navy)]">'+ d.label +'</h2>'
+          + '  <span class="text-slate-500">'+ d.date +'</span>'
+          + '</div>'
+        );
+
+        const items = d.items.filter(function(it){
+          if(!tagActive(it.type)) return false;
+          if(!q) return true;
+          return (
+            (it.title||'').toLowerCase().includes(q) ||
+            (it.text||'').toLowerCase().includes(q)
+          );
+        });
+        if(items.length===0) return;
+
+        var itemsHTML = items.map(function(it){
+          const tagLabel = DATA.tags[it.type];
+          const links = (it.links||[]).map(function(l){
+            return '<a href="'+ l.url +'" target="_blank" rel="noopener noreferrer" class="chip-link"><i data-lucide="link-2" class="w-4 h-4"></i><span>'+ l.label +'</span></a>';
+          }).join('');
+
+          var mapsBtn = '';
+          if(it.link){ mapsBtn = '<a href="'+ it.link +'" target="_blank" rel="noopener noreferrer" class="chip-link"><i data-lucide="map-pin" class="w-4 h-4"></i><span>Maps</span></a>'; }
+
+          return (
+            '<article class="relative pl-16 py-4">'
+            + '  <div class="timeline-node"><i data-lucide="'+ it.icon +'" class="w-4 h-4 text-[var(--bavarian-blue)]"></i></div>'
+            + '  <div class="card">'
+            + '    <div class="flex items-center justify-between">'
+            + '      <div class="flex items-center gap-3">'
+            + '        <div class="text-sm text-slate-500">'+ (it.time||'') +'</div>'
+            + '        <h3 class="font-semibold">'+ (it.title||'') +'</h3>'
+            + '      </div>'
+            + '      <span class="badge">'+ (tagLabel||'') +'</span>'
+            + '    </div>'
+            + '    <p class="mt-2 text-sm">'+ (it.text||'') +'</p>'
+            + '    <div class="mt-2 chip-wrap">'
+            +        mapsBtn + links +
+            '    </div>'
+            + '  </div>'
+            + '</article>'
+          );
+        }).join('');
+
+        html += header + '<div class="relative mt-3"><div class="timeline-line"></div>' + itemsHTML + '</div>';
+      });
+
+      if(!html) html = '<div class="text-slate-500 text-center py-10">No hay resultados con los filtros actuales.</div>';
+
+      list.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // ===== Clima (links a Google) =====
+    function renderWeather(){
+      const grid = document.getElementById('weatherGrid');
+      const cards = DATA.weatherCities.map(function(c){
+        const q = encodeURIComponent(c.q);
+        const url = 'https://www.google.com/search?q=' + q;
+        return (
+          '<a class="weather-card block hover:shadow-lg transition" href="'+ url +'" target="_blank" rel="noopener noreferrer">'
+          + '  <div class="flex items-center gap-3">'
+          + '    <i data-lucide="'+ c.icon +'" class="w-6 h-6 text-[var(--bavarian-blue)]"></i>'
+          + '    <div>'
+          + '      <h3 class="font-semibold text-[var(--bavarian-navy)]">'+ c.name +'</h3>'
+          + '      <p class="text-sm text-slate-600">Ver clima ahora en Google</p>'
+          + '    </div>'
+          + '  </div>'
+          + '</a>'
+        );
+      }).join('');
+      grid.innerHTML = cards;
+      lucide.createIcons();
+    }
+
+    // ===== Glosario (solo visual) =====
+    function renderGlossary(){
+      var body = document.getElementById('glossaryBody');
+      var rows = DATA.glossary.map(function(item){
+        return '<tr>'
+          + '<td class="px-4 py-2 border-b">'+ item.es +'</td>'
+          + '<td class="px-4 py-2 border-b">'+ item.de +'</td>'
+          + '</tr>';
+      }).join('');
+      body.innerHTML = rows;
+      lucide.createIcons();
+    }
+
+    // ===== Búsqueda =====
+    document.getElementById('q').addEventListener('input', function(e){ state.q = e.target.value; renderList(); });
+
+    // ===== Init =====
+    renderSummary();
+    renderDayTabs();
+    renderFilters();
+    renderList();
+    renderWeather();
+    renderGlossary();
+    lucide.createIcons();
+
+    // ====== TESTS (abrir con ?debug=1) ======
+    function runTests(){
+      var results = [];
+      function ok(name, cond){ results.push((cond? '✅ ' : '❌ ') + name); }
+
+      ok('Resumen tiene 5 tarjetas', document.querySelectorAll('#resumen .card').length === 5);
+      ok('Resumen incluye Punto de reunión', document.getElementById('resumen').innerText.indexOf('Punto de reunión') !== -1);
+      ok('Resumen incluye Aparcamiento T2 Barcelona', document.getElementById('resumen').innerText.indexOf('Aparcamiento T2 Barcelona') !== -1);
+      ok('Link mapa Punto de reunión presente', Array.from(document.querySelectorAll('#resumen a.chip-link')).some(function(a){ return a.href.indexOf('7MUue69Jso2YYSMy8') !== -1; }));
+      ok('Tabs de día renderizados', document.querySelectorAll('#dayTabs button').length === (1 + DATA.days.length));
+      var prevHTML = document.getElementById('lista').innerHTML;
+      state.q = 'Uerige'; renderList();
+      ok('Búsqueda "Uerige" devuelve resultados', document.querySelectorAll('#lista article').length >= 1);
+      state.q = ''; renderList();
+      ok('Sección clima tiene 4 tarjetas', document.querySelectorAll('#weatherGrid a.weather-card').length === 4);
+      ok('Título visible (tiene faja)', document.querySelector('.title-ribbon') !== null);
+      ok('No hay "undefined" en el DOM', document.body.innerHTML.indexOf('undefined') === -1);
+      ok('Hay chips de enlace en la lista', document.querySelectorAll('#lista a.chip-link').length >= 3);
+      // Filtro por Feria
+      (function(){
+        var backup = new Set(state.filters);
+        state.filters = new Set(['feria']); renderList();
+        var hasRest = Array.from(document.querySelectorAll('#lista .badge')).some(function(b){ return b.textContent.includes('Restauración'); });
+        var hasFeria = Array.from(document.querySelectorAll('#lista .badge')).some(function(b){ return b.textContent.includes('Feria'); });
+        ok('Filtro por "Feria" oculta Restauración', !hasRest && hasFeria);
+        state.filters = backup; renderList();
+      })();
+      // Cambiar a Domingo
+      (function(){
+        var backup = state.day; state.day = 'domingo'; renderList();
+        var hasDomingoHeader = Array.from(document.querySelectorAll('#lista h2')).some(function(h){ return h.textContent.indexOf('Domingo 12') !== -1; });
+        ok('Tab de Domingo muestra cabecera', hasDomingoHeader);
+        state.day = backup; renderList();
+      })();
+      // Extra: Tab "Todos" existe
+      ok('Tab "Todos" presente', document.querySelector('#dayTabs button[data-day="all"]') !== null);
+      // Extra: Enlaces de clima usan Google con query
+      ok('Links de clima válidos', Array.from(document.querySelectorAll('#weatherGrid a.weather-card')).every(function(a){ return a.href.indexOf('google.com/search?q=') !== -1; }));
+      // Glosario (solo visual)
+      ok('Glosario renderizado con 7 filas', document.querySelectorAll('#glosario tbody tr').length === 7);
+      ok('Glosario contiene "Fünf Bier"', document.getElementById('glosario').innerText.indexOf('Fünf Bier') !== -1);
+      ok('Glosario NO tiene botones de copiar', document.querySelectorAll('#glossaryBody button').length === 0);
+      ok('Cabecera del glosario sin columna Acción', Array.from(document.querySelectorAll('#glosario thead th')).every(function(th){ return th.textContent.trim() !== 'Acción'; }));
+      ok('No existe secuencia rota </n+ en el DOM', document.body.innerHTML.indexOf('</n+') === -1);
+
+      return results.join('\n');
+    }
+
+    if(new URLSearchParams(location.search).get('debug') === '1'){
+      var log = runTests();
+      var box = document.getElementById('debug');
+      box.style.display = 'block';
+      document.getElementById('debugLog').textContent = log;
+      console.log('[Tests]', '\n' + log);
+    }
+  })();
+  </script>
+</body>
+</html>
